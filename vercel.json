@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm --filter @prosite/shared build && pnpm --filter @prosite/ui build && pnpm --filter @prosite/frontend build",
+  "buildCommand": "turbo run build --filter=@prosite/frontend",
   "installCommand": "pnpm install",
   "outputDirectory": "apps/frontend/dist",
   "framework": null,
