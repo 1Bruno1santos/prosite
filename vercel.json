@@ -1,7 +1,5 @@
 {
-  "buildCommand": "turbo run build --filter=@prosite/frontend",
-  "installCommand": "pnpm install",
+  "buildCommand": "node scripts/vercel-build-simple.js",
   "outputDirectory": "apps/frontend/dist",
-  "framework": null,
-  "ignoreBuildErrors": false
+  "installCommand": "pnpm install --no-frozen-lockfile"
 }
