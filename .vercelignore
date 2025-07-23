@@ -1,0 +1,29 @@
+# Ignore non-essential files
+.github
+.husky
+.serena
+docs
+infrastructure
+scripts
+*.md
+!README.md
+.eslintrc.js
+.prettierrc
+commitlint.config.js
+docker-compose*.yml
+
+# Ignore test files
+**/*.test.*
+**/*.spec.*
+**/test/
+**/tests/
+**/__tests__/
+
+# Ignore source maps in production
+*.map
+
+# Ignore TypeScript configs we don't need
+tsconfig.*.json
+!tsconfig.json
+!apps/frontend/tsconfig.json
+!packages/*/tsconfig.json
