@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd apps/frontend && npm run build",
+  "buildCommand": "pnpm --filter @prosite/frontend build",
   "outputDirectory": "apps/frontend/dist",
   "installCommand": "pnpm install --no-frozen-lockfile"
 }
