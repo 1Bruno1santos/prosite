@@ -1,0 +1,38 @@
+# Ignore backend and database packages for frontend deployment
+apps/backend
+packages/database/data
+packages/database/*.db
+packages/database/*.sqlite
+packages/database/*.sqlite3
+
+# Development files
+.github
+.husky
+infrastructure
+scripts
+docs
+
+# Environment files
+.env
+.env.local
+.env.*.local
+apps/backend/.env
+apps/backend/.env.example
+
+# Docker files
+docker-compose.yml
+docker-compose.dev.yml
+Dockerfile
+.dockerignore
+
+# IDE
+.vscode
+.idea
+
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+!README.md
