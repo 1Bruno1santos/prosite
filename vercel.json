@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm --filter @prosite/frontend build",
+  "buildCommand": "pnpm --filter @prosite/shared build && pnpm --filter @prosite/ui build && pnpm --filter @prosite/frontend build",
   "outputDirectory": "apps/frontend/dist",
   "installCommand": "pnpm install --no-frozen-lockfile"
 }
