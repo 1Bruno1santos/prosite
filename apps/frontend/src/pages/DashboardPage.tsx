@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '@/lib/api';
-import { Castle as CastleIcon, Shield, Swords, AlertCircle } from 'lucide-react';
+import { Castle as CastleIcon, Shield, AlertCircle } from 'lucide-react';
 
 interface Castle {
   id: string;

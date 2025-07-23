@@ -16,9 +16,5 @@
       "@prosite/ui/*": ["../../packages/ui/src/*"]
     }
   },
-  "include": ["src"],
-  "references": [
-    { "path": "../../packages/shared" },
-    { "path": "../../packages/ui" }
-  ]
+  "include": ["src", "../../packages/shared/src", "../../packages/ui/src"]
 }
