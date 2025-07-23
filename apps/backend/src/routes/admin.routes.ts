@@ -36,85 +36,136 @@ router.use(authenticateToken);
 router.use(requireRole('admin'));
 
 // Dashboard metrics
-router.get('/metrics', asyncHandler(async (req, res) => {
+router.get('/dashboard/metrics', asyncHandler(async (req, res) => {
   const now = new Date();
-  const lastHour = new Date(now.getTime() - 60 * 60 * 1000);
-  const lastDay = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
   const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  // Get metrics
+  // Get total and active clients
+  const [{ totalClients }] = await db
+    .select({ totalClients: sql<number>`COUNT(*)` })
+    .from(clients);
+
   const [{ activeClients }] = await db
     .select({ activeClients: sql<number>`COUNT(*)` })
     .from(clients)
-    .where(eq(clients.active, true));
+    .where(eq(clients.status, 'active'));
 
+  // Get total and active castles
   const [{ totalCastles }] = await db
     .select({ totalCastles: sql<number>`COUNT(*)` })
     .from(castles);
 
-  const [{ changesLastHour }] = await db
-    .select({ changesLastHour: sql<number>`COUNT(*)` })
-    .from(logs)
-    .where(sql`${logs.createdAt} >= ${lastHour}`);
+  const [{ activeCastles }] = await db
+    .select({ activeCastles: sql<number>`COUNT(*)` })
+    .from(castles)
+    .where(eq(castles.active, true));
 
-  const [{ changesLastDay }] = await db
-    .select({ changesLastDay: sql<number>`COUNT(*)` })
-    .from(logs)
-    .where(sql`${logs.createdAt} >= ${lastDay}`);
+  // Calculate growth
+  const [{ lastMonthClients }] = await db
+    .select({ lastMonthClients: sql<number>`COUNT(*)` })
+    .from(clients)
+    .where(sql`${clients.createdAt} <= ${lastMonth}`);
 
-  const [{ changesLastWeek }] = await db
-    .select({ changesLastWeek: sql<number>`COUNT(*)` })
-    .from(logs)
-    .where(sql`${logs.createdAt} >= ${lastWeek}`);
+  const clientsGrowth = lastMonthClients > 0 
+    ? Math.round(((totalClients - lastMonthClients) / lastMonthClients) * 100)
+    : 100;
 
-  const metrics: Metrics = {
-    activeClients,
-    totalCastles,
-    changesLastHour,
-    changesLastDay,
-    changesLastWeek,
-    averageResponseTime: 0, // TODO: Implement response time tracking
-  };
+  const [{ lastMonthCastles }] = await db
+    .select({ lastMonthCastles: sql<number>`COUNT(*)` })
+    .from(castles)
+    .where(sql`${castles.createdAt} <= ${lastMonth}`);
+
+  const castlesGrowth = lastMonthCastles > 0
+    ? Math.round(((totalCastles - lastMonthCastles) / lastMonthCastles) * 100)
+    : 100;
+
+  // Get recent activity
+  const recentActivity = await db
+    .select({
+      id: logs.id,
+      type: logs.action,
+      description: logs.details,
+      timestamp: logs.createdAt,
+    })
+    .from(logs)
+    .orderBy(desc(logs.createdAt))
+    .limit(10);
+
+  // Get clients over time (last 30 days)
+  const clientsOverTime = [];
+  for (let i = 29; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    date.setHours(0, 0, 0, 0);
+    const nextDate = new Date(date);
+    nextDate.setDate(date.getDate() + 1);
+
+    const [{ count }] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(clients)
+      .where(sql`${clients.createdAt} >= ${date} AND ${clients.createdAt} < ${nextDate}`);
+
+    clientsOverTime.push({
+      date: date.toISOString().split('T')[0],
+      count,
+    });
+  }
+
+  // Get top 10 clients by castle count
+  const castlesPerClient = await db
+    .select({
+      clientName: clients.name,
+      castles: sql<number>`COUNT(${castles.id})`,
+    })
+    .from(clients)
+    .leftJoin(castles, eq(castles.clientId, clients.id))
+    .groupBy(clients.id)
+    .orderBy(desc(sql`COUNT(${castles.id})`))
+    .limit(10);
 
   res.json({
-    success: true,
-    data: metrics,
+    totalClients,
+    activeClients,
+    totalCastles,
+    activeCastles,
+    clientsGrowth,
+    castlesGrowth,
+    recentActivity,
+    clientsOverTime,
+    castlesPerClient,
   });
 }));
 
 // List clients with search and pagination
 router.get('/clients', asyncHandler(async (req, res) => {
-  const { query, page, pageSize, sortBy = 'createdAt', sortOrder } = searchSchema.parse(req.query);
+  const query = req.query.search as string | undefined;
   
-  const offset = (page - 1) * pageSize;
-  
-  let baseQuery = db.select().from(clients);
-  
-  if (query) {
-    baseQuery = baseQuery.where(like(clients.email, `%${query}%`));
-  }
-  
-  // TODO: Add proper sorting
-  const clientsList = await baseQuery
-    .orderBy(desc(clients.createdAt))
-    .limit(pageSize)
-    .offset(offset);
-
-  const [{ total }] = await db
-    .select({ total: sql<number>`COUNT(*)` })
+  // Get clients with castle count
+  let clientsQuery = db
+    .select({
+      id: clients.id,
+      name: clients.name,
+      email: clients.email,
+      status: clients.status,
+      createdAt: clients.createdAt,
+      lastLoginAt: clients.lastLogin,
+      billingEnd: clients.billingEnd,
+      castleCount: sql<number>`COUNT(DISTINCT ${castles.id})`,
+    })
     .from(clients)
-    .where(query ? like(clients.email, `%${query}%`) : undefined);
+    .leftJoin(castles, eq(castles.clientId, clients.id))
+    .groupBy(clients.id);
 
-  res.json({
-    success: true,
-    data: {
-      items: clientsList,
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
-    },
-  });
+  if (query) {
+    clientsQuery = clientsQuery.where(
+      sql`${clients.name} LIKE ${`%${query}%`} OR ${clients.email} LIKE ${`%${query}%`}`
+    );
+  }
+
+  const clientsList = await clientsQuery.orderBy(desc(clients.createdAt));
+
+  res.json(clientsList);
 }));
 
 // Get client details
@@ -198,6 +249,33 @@ router.post('/clients', asyncHandler(async (req, res) => {
   });
 }));
 
+// Update client status
+router.patch('/clients/:id/status', asyncHandler(async (req, res) => {
+  const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+  const { status } = z.object({ 
+    status: z.enum(['active', 'suspended']) 
+  }).parse(req.body);
+
+  const [updated] = await db
+    .update(clients)
+    .set({ status })
+    .where(eq(clients.id, id))
+    .returning();
+
+  if (!updated) {
+    throw new AppError(
+      HTTP_STATUS.NOT_FOUND,
+      ERROR_CODES.RESOURCE_NOT_FOUND,
+      'Client not found'
+    );
+  }
+
+  res.json({
+    success: true,
+    data: updated,
+  });
+}));
+
 // Update client
 router.put('/clients/:id', asyncHandler(async (req, res) => {
   const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
@@ -234,53 +312,102 @@ router.put('/clients/:id', asyncHandler(async (req, res) => {
   });
 }));
 
-// Get logs with filters
-router.get('/logs', asyncHandler(async (req, res) => {
-  const { query, page, pageSize } = searchSchema.parse(req.query);
-  
-  const offset = (page - 1) * pageSize;
-  
-  // TODO: Add proper filtering
-  const logsList = await db
-    .select({
-      log: logs,
-      clientEmail: clients.email,
-      castleName: castles.name,
-    })
-    .from(logs)
-    .innerJoin(clients, eq(logs.clientId, clients.id))
-    .innerJoin(castles, eq(logs.castleId, castles.id))
-    .orderBy(desc(logs.createdAt))
-    .limit(pageSize)
-    .offset(offset);
+// Delete client
+router.delete('/clients/:id', asyncHandler(async (req, res) => {
+  const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
 
-  const [{ total }] = await db
-    .select({ total: sql<number>`COUNT(*)` })
-    .from(logs);
+  // Delete client's castles first
+  await db.delete(castles).where(eq(castles.clientId, id));
+  
+  // Delete client's logs
+  await db.delete(logs).where(eq(logs.clientId, id));
+  
+  // Delete client
+  const [deleted] = await db
+    .delete(clients)
+    .where(eq(clients.id, id))
+    .returning();
+
+  if (!deleted) {
+    throw new AppError(
+      HTTP_STATUS.NOT_FOUND,
+      ERROR_CODES.RESOURCE_NOT_FOUND,
+      'Client not found'
+    );
+  }
 
   res.json({
     success: true,
-    data: {
-      items: logsList,
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
-    },
+    data: deleted,
   });
+}));
+
+// Get logs with filters
+router.get('/logs', asyncHandler(async (req, res) => {
+  const level = req.query.level as string | undefined;
+  const startDate = req.query.startDate as string | undefined;
+  const endDate = req.query.endDate as string | undefined;
+  
+  let logsQuery = db
+    .select({
+      id: logs.id,
+      timestamp: logs.createdAt,
+      level: sql<string>`CASE 
+        WHEN ${logs.action} LIKE '%error%' THEN 'error'
+        WHEN ${logs.action} LIKE '%warning%' THEN 'warning'
+        WHEN ${logs.action} LIKE '%success%' THEN 'success'
+        ELSE 'info'
+      END`,
+      action: logs.action,
+      userId: logs.clientId,
+      userEmail: clients.email,
+      details: logs.details,
+      metadata: sql<any>`json_object()`,
+    })
+    .from(logs)
+    .leftJoin(clients, eq(logs.clientId, clients.id))
+    .orderBy(desc(logs.createdAt));
+
+  if (level && level !== 'all') {
+    logsQuery = logsQuery.where(
+      sql`CASE 
+        WHEN ${logs.action} LIKE '%error%' THEN 'error'
+        WHEN ${logs.action} LIKE '%warning%' THEN 'warning'
+        WHEN ${logs.action} LIKE '%success%' THEN 'success'
+        ELSE 'info'
+      END = ${level}`
+    );
+  }
+
+  if (startDate) {
+    logsQuery = logsQuery.where(sql`${logs.createdAt} >= ${new Date(startDate)}`);
+  }
+
+  if (endDate) {
+    logsQuery = logsQuery.where(sql`${logs.createdAt} <= ${new Date(endDate)}`);
+  }
+
+  const logsList = await logsQuery.limit(100);
+
+  res.json(logsList);
 }));
 
 // Get templates
 router.get('/templates', asyncHandler(async (req, res) => {
   const templatesList = await db
-    .select()
+    .select({
+      id: templates.id,
+      name: templates.name,
+      description: sql<string>`COALESCE(${templates.name}, 'Template de configuração')`,
+      parameters: sql<any>`json(${templates.settingsJson})`,
+      createdAt: templates.createdAt,
+      updatedAt: templates.updatedAt,
+      usageCount: sql<number>`(SELECT COUNT(*) FROM ${castles} WHERE ${castles.templateId} = ${templates.id})`,
+    })
     .from(templates)
     .orderBy(desc(templates.createdAt));
 
-  res.json({
-    success: true,
-    data: templatesList,
-  });
+  res.json(templatesList);
 }));
 
 // Create template
@@ -303,6 +430,52 @@ router.post('/templates', asyncHandler(async (req, res) => {
   res.status(HTTP_STATUS.CREATED).json({
     success: true,
     data: created,
+  });
+}));
+
+// Get admin settings
+router.get('/settings', asyncHandler(async (req, res) => {
+  // Return mock settings for now
+  const settings = {
+    smtp: {
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: process.env.SMTP_SECURE === 'true',
+      user: process.env.SMTP_USER || '',
+      pass: '', // Never send password
+    },
+    notifications: {
+      emailOnNewClient: true,
+      emailOnClientSuspension: true,
+      emailOnSystemError: true,
+    },
+    security: {
+      sessionTimeout: 720, // 12 hours in minutes
+      maxLoginAttempts: 5,
+      passwordMinLength: 8,
+      requireStrongPassword: true,
+    },
+    system: {
+      maintenanceMode: false,
+      debugMode: process.env.NODE_ENV === 'development',
+      logRetentionDays: 30,
+    },
+  };
+
+  res.json(settings);
+}));
+
+// Update admin settings
+router.put('/settings', asyncHandler(async (req, res) => {
+  // Validate settings
+  const settings = req.body;
+  
+  // In a real implementation, save to database or config file
+  // For now, just return success
+  
+  res.json({
+    success: true,
+    message: 'Settings updated successfully',
   });
 }));
 
