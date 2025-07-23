@@ -1,5 +1,5 @@
 {
-  "buildCommand": "bash scripts/build-for-vercel.sh",
+  "buildCommand": "cd ../.. && pnpm --filter @prosite/shared build && pnpm --filter @prosite/ui build && cd apps/frontend && pnpm build",
   "outputDirectory": "apps/frontend/dist",
   "installCommand": "pnpm install --no-frozen-lockfile",
   "framework": null
