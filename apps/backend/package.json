@@ -41,7 +41,7 @@
     "@types/nodemailer": "^6.4.15",
     "@vitest/coverage-v8": "^1.6.0",
     "eslint": "^8.57.0",
-    "rimraf": "^5.0.7",
+    "rimraf": "^6.0.1",
     "tsx": "^4.16.2",
     "typescript": "^5.5.3",
     "vitest": "^1.6.0"

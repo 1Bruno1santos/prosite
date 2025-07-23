@@ -29,7 +29,7 @@
     "@types/node": "^20.19.9",
     "drizzle-kit": "^0.22.8",
     "eslint": "^8.57.0",
-    "rimraf": "^5.0.7",
+    "rimraf": "^6.0.1",
     "tsup": "^8.1.0",
     "tsx": "^4.16.2",
     "typescript": "^5.5.3"
