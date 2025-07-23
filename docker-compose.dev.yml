@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  # Development database - PostgreSQL for future migration
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: prosite
+      POSTGRES_PASSWORD: prosite_dev
+      POSTGRES_DB: prosite
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Redis for session management (future)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+
+  # Adminer for database management
+  adminer:
+    image: adminer
+    ports:
+      - '8080:8080'
+
+volumes:
+  postgres_data:

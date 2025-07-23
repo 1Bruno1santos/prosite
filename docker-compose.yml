@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: ./infrastructure/docker/backend.Dockerfile
+    ports:
+      - '3001:3001'
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: /app/data/prosite.db
+      JWT_ACCESS_SECRET: dev-access-secret-change-in-production
+      JWT_REFRESH_SECRET: dev-refresh-secret-change-in-production
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+      SMTP_USER: noreply@prosite.com
+      SMTP_PASS: ''
+      SMTP_FROM: noreply@prosite.com
+      WINDOWS_SERVICE_URL: https://host.docker.internal:4433
+      WINDOWS_SERVICE_API_KEY: dev-api-key
+      FRONTEND_URL: http://localhost:3000
+      ADMIN_URL: http://localhost:3002
+      LOG_LEVEL: debug
+    volumes:
+      - ./apps/backend:/app/apps/backend
+      - ./packages:/app/packages
+      - ./data:/app/data
+    depends_on:
+      - mailhog
+    command: pnpm --filter @prosite/backend dev
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./infrastructure/docker/frontend.Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      VITE_API_URL: http://localhost:3001/api
+    volumes:
+      - ./apps/frontend:/app/apps/frontend
+      - ./packages:/app/packages
+    command: pnpm --filter @prosite/frontend dev
+
+  admin:
+    build:
+      context: .
+      dockerfile: ./infrastructure/docker/frontend.Dockerfile
+    ports:
+      - '3002:3000'
+    environment:
+      VITE_API_URL: http://localhost:3001/api
+      VITE_IS_ADMIN: true
+    volumes:
+      - ./apps/admin:/app/apps/admin
+      - ./packages:/app/packages
+    command: pnpm --filter @prosite/admin dev
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+
+volumes:
+  data:

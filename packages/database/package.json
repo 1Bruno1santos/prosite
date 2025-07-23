@@ -1,0 +1,37 @@
+{
+  "name": "@prosite/database",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "dev": "tsup --watch",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts",
+    "clean": "rimraf dist",
+    "migrate": "tsx src/migrate.ts",
+    "seed": "tsx src/seed.ts",
+    "generate": "drizzle-kit generate:sqlite",
+    "studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@prosite/shared": "workspace:*",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.1.1",
+    "drizzle-orm": "^0.31.2",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/better-sqlite3": "^7.6.10",
+    "@types/node": "^20.19.9",
+    "drizzle-kit": "^0.22.8",
+    "eslint": "^8.57.0",
+    "rimraf": "^5.0.7",
+    "tsup": "^8.1.0",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.3"
+  }
+}

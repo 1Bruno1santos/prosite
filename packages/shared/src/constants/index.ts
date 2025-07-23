@@ -1,0 +1,47 @@
+export const API_VERSION = 'v1';
+
+export const AUTH_CONSTANTS = {
+  ACCESS_TOKEN_EXPIRY: '12h',
+  REFRESH_TOKEN_EXPIRY: '30d',
+  BCRYPT_ROUNDS: 12,
+  PASSWORD_RESET_EXPIRY: 30 * 60 * 1000, // 30 minutes
+} as const;
+
+export const RATE_LIMITS = {
+  DEFAULT: 100, // requests per minute
+  AUTH: 10, // auth attempts per minute
+  PASSWORD_RESET: 3, // reset requests per hour
+} as const;
+
+export const CASTLE_FIELD_TYPES = {
+  BOOLEAN: 'boolean',
+  NUMBER: 'number',
+  STRING: 'string',
+  SELECT: 'select',
+  RANGE: 'range',
+} as const;
+
+export const HTTP_STATUS = {
+  OK: 200,
+  CREATED: 201,
+  ACCEPTED: 202,
+  NO_CONTENT: 204,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  TOO_MANY_REQUESTS: 429,
+  INTERNAL_SERVER_ERROR: 500,
+} as const;
+
+export const ERROR_CODES = {
+  INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
+  TOKEN_EXPIRED: 'TOKEN_EXPIRED',
+  TOKEN_INVALID: 'TOKEN_INVALID',
+  USER_INACTIVE: 'USER_INACTIVE',
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  RESOURCE_NOT_FOUND: 'RESOURCE_NOT_FOUND',
+  PERMISSION_DENIED: 'PERMISSION_DENIED',
+  RATE_LIMIT_EXCEEDED: 'RATE_LIMIT_EXCEEDED',
+  INTERNAL_ERROR: 'INTERNAL_ERROR',
+} as const;
